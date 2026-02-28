@@ -113,8 +113,10 @@ dev-tmux:
 		tmux send-keys -t $(TMUX_SESSION):backend "cd $(CURDIR)/backend && make dev" Enter; \
 		tmux new-window -t $(TMUX_SESSION) -n frontend; \
 		tmux send-keys -t $(TMUX_SESSION):frontend "cd $(CURDIR)/frontend && make dev" Enter; \
+		tmux new-window -t $(TMUX_SESSION) -n pty-sidecar; \
+		tmux send-keys -t $(TMUX_SESSION):pty-sidecar "cd $(CURDIR)/pty-sidecar && npx tsx src/index.ts" Enter; \
 		tmux select-window -t $(TMUX_SESSION):backend; \
-		echo "Started tmux session '$(TMUX_SESSION)' with backend and frontend windows"; \
+		echo "Started tmux session '$(TMUX_SESSION)' with backend, frontend, and pty-sidecar windows"; \
 		echo "Attach with: tmux attach -t $(TMUX_SESSION)"; \
 	fi
 

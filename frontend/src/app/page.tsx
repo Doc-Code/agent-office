@@ -382,6 +382,25 @@ export default function V2TestPage(): React.ReactNode {
     useGameStore.getState().setDebugMode(!debugMode);
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't intercept when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "Escape") {
+        // Close terminal overlay
+        if (activeTerminal) {
+          setActiveTerminal(null);
+          return;
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [activeTerminal]);
+
   return (
     <main className="flex h-screen flex-col bg-neutral-950 p-2 overflow-hidden relative">
       {/* Clear DB Modal */}
@@ -446,11 +465,17 @@ export default function V2TestPage(): React.ReactNode {
             </kbd>
             <span className="text-slate-300">Show queue slots</span>
           </div>
-          <div className="flex justify-between items-center py-2">
+          <div className="flex justify-between items-center py-2 border-b border-slate-700">
             <kbd className="px-2 py-1 bg-slate-800 rounded text-white font-bold">
               L
             </kbd>
             <span className="text-slate-300">Show phase labels</span>
+          </div>
+          <div className="flex justify-between items-center py-2">
+            <kbd className="px-2 py-1 bg-slate-800 rounded text-white font-bold">
+              Esc
+            </kbd>
+            <span className="text-slate-300">Close terminal overlay</span>
           </div>
         </div>
       </Modal>
