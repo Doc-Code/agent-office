@@ -5,7 +5,7 @@ import {
   Users,
   Skull,
   Trash2,
-  MessageCircle,
+  Terminal,
   ChevronDown,
   ChevronUp,
   Circle,
@@ -18,6 +18,7 @@ interface AgentDashboardProps {
   onKill: (agentId: string) => Promise<void>;
   onRemove: (agentId: string) => Promise<void>;
   onChat: (agentId: string, message: string) => Promise<void>;
+  onTerminal: (agentId: string, agentName: string) => void;
 }
 
 function StatusDot({ status }: { status: string }) {
@@ -35,11 +36,13 @@ function AgentCard({
   onKill,
   onRemove,
   onChat,
+  onTerminal,
 }: {
   agent: OrchestratorAgent;
   onKill: () => void;
   onRemove: () => void;
   onChat: (message: string) => void;
+  onTerminal: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -107,13 +110,22 @@ function AgentCard({
           {/* Actions */}
           <div className="flex gap-1.5 pt-1">
             {agent.is_alive && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onKill(); }}
-                className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded text-[10px] font-bold transition-colors"
-              >
-                <Skull size={10} />
-                KILL
-              </button>
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onTerminal(); }}
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded text-[10px] font-bold transition-colors"
+                >
+                  <Terminal size={10} />
+                  TERMINAL
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onKill(); }}
+                  className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded text-[10px] font-bold transition-colors"
+                >
+                  <Skull size={10} />
+                  KILL
+                </button>
+              </>
             )}
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -134,6 +146,7 @@ export default function AgentDashboard({
   onKill,
   onRemove,
   onChat,
+  onTerminal,
 }: AgentDashboardProps) {
   const [isOpen, setIsOpen] = useState(true);
   const aliveCount = agents.filter((a) => a.is_alive).length;
@@ -170,6 +183,7 @@ export default function AgentDashboard({
                 onKill={() => onKill(agent.agent_id)}
                 onRemove={() => onRemove(agent.agent_id)}
                 onChat={(msg) => onChat(agent.agent_id, msg)}
+                onTerminal={() => onTerminal(agent.agent_id, agent.name)}
               />
             ))
           )}

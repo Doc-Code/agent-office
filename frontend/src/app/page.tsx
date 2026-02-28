@@ -43,6 +43,7 @@ import Modal from "@/components/overlay/Modal";
 import SettingsModal from "@/components/overlay/SettingsModal";
 import SpawnPanel from "@/components/overlay/SpawnPanel";
 import AgentDashboard from "@/components/overlay/AgentDashboard";
+import TerminalPanel from "@/components/overlay/TerminalPanel";
 import { useOrchestrator } from "@/hooks/useOrchestrator";
 import {
   usePreferencesStore,
@@ -93,6 +94,10 @@ export default function V2TestPage(): React.ReactNode {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTerminal, setActiveTerminal] = useState<{
+    agentId: string;
+    agentName: string;
+  } | null>(null);
 
   // Connect to WebSocket with new hook
   useWebSocketEvents({ sessionId });
@@ -803,6 +808,7 @@ export default function V2TestPage(): React.ReactNode {
                   onKill={killAgent}
                   onRemove={removeAgent}
                   onChat={chatAgent}
+                  onTerminal={(id, name) => setActiveTerminal({ agentId: id, agentName: name })}
                 />
               </div>
 
@@ -1030,6 +1036,7 @@ export default function V2TestPage(): React.ReactNode {
                     onKill={killAgent}
                     onRemove={removeAgent}
                     onChat={chatAgent}
+                    onTerminal={(id, name) => setActiveTerminal({ agentId: id, agentName: name })}
                   />
                 </div>
               </>
@@ -1054,6 +1061,15 @@ export default function V2TestPage(): React.ReactNode {
             </div>
           </aside>
         </div>
+      )}
+
+      {/* Terminal Overlay */}
+      {activeTerminal && (
+        <TerminalPanel
+          agentId={activeTerminal.agentId}
+          agentName={activeTerminal.agentName}
+          onClose={() => setActiveTerminal(null)}
+        />
       )}
     </main>
   );
