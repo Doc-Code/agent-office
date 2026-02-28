@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from rich.logging import RichHandler
 
-from app.api.routes import events, preferences, sessions
+from app.api.routes import events, orchestrator, preferences, sessions
 from app.api.websocket import manager
 from app.config import get_settings
 from app.core.event_processor import event_processor
@@ -41,6 +41,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     yield
 
     await git_service.stop()
+    # Clean up PTY bridge
+    from app.orchestrator.pty_bridge import get_pty_bridge
+    await get_pty_bridge().close()
     await get_engine().dispose()
 
 
@@ -62,6 +65,7 @@ app.add_middleware(
 app.include_router(events.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(preferences.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(sessions.router, prefix=f"{settings.API_V1_STR}")
+app.include_router(orchestrator.router, prefix=f"{settings.API_V1_STR}")
 
 
 @app.get("/health")

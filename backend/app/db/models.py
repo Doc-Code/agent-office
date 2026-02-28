@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
@@ -90,4 +90,99 @@ class UserPreference(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
+    )
+
+
+# --- Orchestrator Models ---
+
+
+class AgentRecord(Base):
+    """Persistent agent identity. Survives across sessions."""
+
+    __tablename__ = "orchestrator_agents"
+
+    agent_id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    role: Mapped[str] = mapped_column(String, default="worker")  # worker | mayor | witness
+    assigned_repo: Mapped[str | None] = mapped_column(String, nullable=True)
+    repo_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    worktree_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="idle")  # idle | working | stuck | offline
+    current_session_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    hook_task_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    desk_slot: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    personality: Mapped[str | None] = mapped_column(Text, nullable=True)
+    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tasks_completed: Mapped[int] = mapped_column(Integer, default=0)
+    total_tokens_used: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    last_active_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class WorkTaskRecord(Base):
+    """Work items linked to Linear issues."""
+
+    __tablename__ = "orchestrator_tasks"
+
+    task_id: Mapped[str] = mapped_column(String, primary_key=True)
+    linear_issue_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    linear_issue_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    title: Mapped[str] = mapped_column(String)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="pending")  # pending | in_progress | blocked | completed | failed
+    priority: Mapped[int] = mapped_column(Integer, default=3)  # 1=urgent, 4=low
+    assigned_agent_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("orchestrator_agents.agent_id"), nullable=True
+    )
+    repo: Mapped[str | None] = mapped_column(String, nullable=True)
+    parent_task_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    timeout_minutes: Mapped[int] = mapped_column(Integer, default=30)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MailRecord(Base):
+    """Inter-agent async messaging."""
+
+    __tablename__ = "orchestrator_mail"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    from_agent_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("orchestrator_agents.agent_id"), nullable=True
+    )
+    to_agent_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("orchestrator_agents.agent_id"), nullable=True
+    )
+    subject: Mapped[str | None] = mapped_column(String, nullable=True)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    thread_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class OrchestratorEventLog(Base):
+    """Audit trail for orchestrator actions."""
+
+    __tablename__ = "orchestrator_events_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    agent_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    event_type: Mapped[str] = mapped_column(String)
+    data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

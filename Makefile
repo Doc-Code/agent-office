@@ -1,4 +1,4 @@
-.PHONY: install install-all dev backend frontend simulate checkall lint fmt test typecheck \
+.PHONY: install install-all dev backend frontend pty-sidecar start simulate checkall lint fmt test typecheck \
 	hooks-install hooks-uninstall hooks-reinstall hooks-status hooks-logs hooks-logs-follow hooks-logs-clear \
 	hooks-debug-on hooks-debug-off clean clean-db clean-all \
 	dev-tmux dev-tmux-kill dev-tmux-backend dev-tmux-frontend \
@@ -12,20 +12,26 @@ PKG_INSTALL := $(shell command -v bun >/dev/null 2>&1 && echo "bun install" || e
 install:
 	cd backend && uv sync
 	cd frontend && $(PKG_INSTALL)
+	cd pty-sidecar && $(PKG_INSTALL)
 	cd hooks && uv sync
 
 install-all: install hooks-install
 	@echo "All components installed including hooks"
 
 dev:
-	@echo "Starting backend and frontend in parallel..."
-	@make -j 2 backend frontend
+	@echo "Starting backend, frontend, and PTY sidecar in parallel..."
+	@make -j 3 backend frontend pty-sidecar
+
+start: dev
 
 backend:
 	make -C backend dev
 
 frontend:
 	make -C frontend dev
+
+pty-sidecar:
+	cd pty-sidecar && npx tsx src/index.ts
 
 # Build static frontend and copy to backend for serving
 build-static:

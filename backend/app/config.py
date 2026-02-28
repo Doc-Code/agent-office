@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     CLAUDE_PATH_HOST: str = ""
     CLAUDE_PATH_CONTAINER: str = ""
 
+    # Orchestrator settings
+    pty_sidecar_url: str = "http://localhost:8001"
+    linear_api_key: str = ""
+    linear_team_id: str = ""
+    linear_project_id: str = ""
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def translate_path(self, path: str) -> str:
