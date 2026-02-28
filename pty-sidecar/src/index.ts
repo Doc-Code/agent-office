@@ -232,7 +232,7 @@ app.post("/agents/:agentId/reset", (req, res) => {
     res.status(404).json({ error: "Agent not found" });
     return;
   }
-  res.json({ status: "reset", agentId, pid: session.ptyProcess.pid });
+  res.json({ status: "reset", agentId, pid: session.process.pid });
 });
 
 // --- Start server ---

@@ -41,6 +41,9 @@ import { agentMachineService } from "@/machines/agentMachineService";
 import { formatDistanceToNow } from "date-fns";
 import Modal from "@/components/overlay/Modal";
 import SettingsModal from "@/components/overlay/SettingsModal";
+import SpawnPanel from "@/components/overlay/SpawnPanel";
+import AgentDashboard from "@/components/overlay/AgentDashboard";
+import { useOrchestrator } from "@/hooks/useOrchestrator";
 import {
   usePreferencesStore,
   selectAutoFollowNewSessions,
@@ -114,6 +117,16 @@ export default function V2TestPage(): React.ReactNode {
   const autoFollowNewSessions = usePreferencesStore(
     selectAutoFollowNewSessions,
   );
+
+  // Orchestrator hook for agent management
+  const {
+    agents: orchestratorAgents,
+    loading: orchestratorLoading,
+    spawnAgent,
+    killAgent,
+    chatAgent,
+    removeAgent,
+  } = useOrchestrator();
 
   // Track known session IDs for auto-follow detection
   const knownSessionIds = useRef<Set<string>>(new Set());
@@ -530,6 +543,14 @@ export default function V2TestPage(): React.ReactNode {
         {/* Controls - Desktop only */}
         {!isMobile && (
           <div className="flex gap-4 items-center">
+            <SpawnPanel
+              onSpawn={async (params) => {
+                await spawnAgent(params);
+                showStatus(`Agent "${params.name}" spawned!`, "success");
+              }}
+              loading={orchestratorLoading}
+            />
+
             <button
               onClick={handleSimulate}
               className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 rounded text-xs font-bold transition-colors"
@@ -650,6 +671,14 @@ export default function V2TestPage(): React.ReactNode {
 
               {/* Mobile Controls */}
               <div className="flex flex-col gap-2 mb-6">
+                <SpawnPanel
+                  onSpawn={async (params) => {
+                    await spawnAgent(params);
+                    showStatus(`Agent "${params.name}" spawned!`, "success");
+                    setMobileMenuOpen(false);
+                  }}
+                  loading={orchestratorLoading}
+                />
                 <button
                   onClick={() => {
                     handleSimulate();
@@ -765,6 +794,16 @@ export default function V2TestPage(): React.ReactNode {
               {/* Git Status Panel */}
               <div className="mb-6">
                 <GitStatusPanel />
+              </div>
+
+              {/* Agent Dashboard */}
+              <div className="mb-6">
+                <AgentDashboard
+                  agents={orchestratorAgents}
+                  onKill={killAgent}
+                  onRemove={removeAgent}
+                  onChat={chatAgent}
+                />
               </div>
 
               {/* Event Log */}
@@ -980,8 +1019,18 @@ export default function V2TestPage(): React.ReactNode {
                 </div>
 
                 {/* Git Status Panel */}
-                <div className="flex-grow min-h-0">
+                <div className="flex-shrink-0">
                   <GitStatusPanel />
+                </div>
+
+                {/* Agent Dashboard */}
+                <div className="flex-grow min-h-0">
+                  <AgentDashboard
+                    agents={orchestratorAgents}
+                    onKill={killAgent}
+                    onRemove={removeAgent}
+                    onChat={chatAgent}
+                  />
                 </div>
               </>
             )}
