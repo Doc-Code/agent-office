@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from rich.logging import RichHandler
 
-from app.api.routes import events, orchestrator, preferences, sessions
+from app.api.routes import events, linear, orchestrator, preferences, sessions
 from app.api.websocket import manager
 from app.config import get_settings
 from app.core.event_processor import event_processor
@@ -66,6 +66,7 @@ app.include_router(events.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(preferences.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(sessions.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(orchestrator.router, prefix=f"{settings.API_V1_STR}")
+app.include_router(linear.router, prefix=f"{settings.API_V1_STR}")
 
 
 @app.get("/health")

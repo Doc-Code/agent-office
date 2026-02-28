@@ -44,6 +44,7 @@ import SettingsModal from "@/components/overlay/SettingsModal";
 import SpawnPanel from "@/components/overlay/SpawnPanel";
 import AgentDashboard from "@/components/overlay/AgentDashboard";
 import TerminalPanel from "@/components/overlay/TerminalPanel";
+import LinearBoard from "@/components/overlay/LinearBoard";
 import { useOrchestrator } from "@/hooks/useOrchestrator";
 import {
   usePreferencesStore,
@@ -1050,12 +1051,34 @@ export default function V2TestPage(): React.ReactNode {
 
           {/* Right Sidebar - Debug Panel */}
           <aside className="w-80 flex flex-col gap-2 flex-shrink-0 overflow-hidden">
-            {/* Agent Status - 40% of available height */}
+            {/* Agent Status */}
             <div className="min-h-0" style={{ flex: "2 1 0" }}>
               <AgentStatus />
             </div>
 
-            {/* Event Log - 60% of available height */}
+            {/* Linear Issues */}
+            <div className="min-h-0" style={{ flex: "2 1 0" }}>
+              <LinearBoard
+                agents={orchestratorAgents}
+                onAssign={async (issueId, agentId) => {
+                  try {
+                    await fetch(
+                      `http://localhost:8000/api/v1/linear/issues/${issueId}/assign`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ agent_id: agentId }),
+                      },
+                    );
+                    showStatus("Issue assigned to agent!", "success");
+                  } catch {
+                    showStatus("Failed to assign issue", "error");
+                  }
+                }}
+              />
+            </div>
+
+            {/* Event Log */}
             <div className="min-h-0" style={{ flex: "3 1 0" }}>
               <EventLog />
             </div>
