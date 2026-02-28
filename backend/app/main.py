@@ -38,10 +38,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     git_service.start()
 
+    # Start supervisor background loop
+    from app.orchestrator.supervisor import get_supervisor
+    supervisor = get_supervisor()
+    supervisor.start()
+
     yield
 
+    # Shutdown
+    await supervisor.stop()
     await git_service.stop()
-    # Clean up PTY bridge
     from app.orchestrator.pty_bridge import get_pty_bridge
     await get_pty_bridge().close()
     await get_engine().dispose()

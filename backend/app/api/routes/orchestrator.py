@@ -1,4 +1,4 @@
-"""API routes for agent orchestration - spawn, kill, chat, list."""
+"""API routes for agent orchestration - spawn, kill, chat, list, mail, resume."""
 
 import logging
 from typing import Any
@@ -15,7 +15,10 @@ from app.orchestrator.agent_registry import (
     list_agents,
     update_agent_status,
 )
+from app.orchestrator.handoff import resume_agent, resume_all_agents
+from app.orchestrator.mail_service import get_inbox, mark_read, send_mail
 from app.orchestrator.pty_bridge import get_pty_bridge
+from app.orchestrator.task_registry import list_tasks
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/orchestrator", tags=["orchestrator"])
@@ -215,3 +218,101 @@ async def remove_agent_record(agent_id: str) -> dict[str, str]:
             raise HTTPException(status_code=404, detail="Agent not found")
 
     return {"status": "deleted", "agent_id": agent_id}
+
+
+# --- Resume / GUPP ---
+
+
+@router.post("/agents/{agent_id}/resume")
+async def resume_agent_endpoint(agent_id: str) -> dict[str, Any]:
+    """Resume an agent with its last in-progress task (GUPP pattern)."""
+    success = await resume_agent(agent_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to resume agent")
+    return {"status": "resumed", "agent_id": agent_id}
+
+
+@router.post("/resume-all")
+async def resume_all() -> dict[str, Any]:
+    """Resume all previously active agents on startup."""
+    results = await resume_all_agents()
+    return {"results": results}
+
+
+# --- Mail ---
+
+
+class MailRequest(BaseModel):
+    to_agent_id: str
+    subject: str
+    body: str
+    thread_id: str | None = None
+
+
+@router.post("/agents/{agent_id}/mail")
+async def send_mail_to_agent(agent_id: str, req: MailRequest) -> dict[str, Any]:
+    """Send an async message to another agent."""
+    async with AsyncSessionLocal() as db:
+        mail = await send_mail(
+            db,
+            from_agent_id=agent_id,
+            to_agent_id=req.to_agent_id,
+            subject=req.subject,
+            body=req.body,
+            thread_id=req.thread_id,
+        )
+    return {"id": mail.id, "status": "sent"}
+
+
+@router.get("/agents/{agent_id}/mail")
+async def get_agent_mail(agent_id: str, unread: bool = True) -> list[dict[str, Any]]:
+    """Get messages for an agent."""
+    async with AsyncSessionLocal() as db:
+        messages = await get_inbox(db, agent_id, unread_only=unread)
+    return [
+        {
+            "id": m.id,
+            "from": m.from_agent_id,
+            "subject": m.subject,
+            "body": m.body,
+            "is_read": m.is_read,
+            "thread_id": m.thread_id,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in messages
+    ]
+
+
+@router.post("/mail/{mail_id}/read")
+async def mark_mail_read(mail_id: int) -> dict[str, Any]:
+    """Mark a message as read."""
+    async with AsyncSessionLocal() as db:
+        ok = await mark_read(db, mail_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Mail not found")
+    return {"status": "read", "mail_id": mail_id}
+
+
+# --- Tasks ---
+
+
+@router.get("/agents/{agent_id}/tasks")
+async def get_agent_tasks(agent_id: str, status: str | None = None) -> list[dict[str, Any]]:
+    """Get tasks assigned to an agent."""
+    async with AsyncSessionLocal() as db:
+        tasks = await list_tasks(db, agent_id=agent_id, status=status)
+    return [
+        {
+            "task_id": t.task_id,
+            "title": t.title,
+            "status": t.status,
+            "linear_issue_id": t.linear_issue_id,
+            "linear_issue_url": t.linear_issue_url,
+            "repo": t.repo,
+            "priority": t.priority,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+            "started_at": t.started_at.isoformat() if t.started_at else None,
+            "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+        }
+        for t in tasks
+    ]
